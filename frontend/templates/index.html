@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>股票/ETF分析系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header .update-time {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .search-box input:focus {
+            border-color: #667eea;
+        }
+
+        .search-box button {
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .search-box button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .search-box button:active {
+            transform: translateY(0);
+        }
+
+        .search-box button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .quick-search {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .quick-btn {
+            padding: 8px 16px;
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quick-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .stock-name {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .result-card {
+            display: none;
+        }
+
+        .result-card.show {
+            display: block;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .result-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .result-price {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .result-price.up {
+            color: #ef5350;
+        }
+
+        .result-price.down {
+            color: #26a69a;
+        }
+
+        .refresh-btn {
+            padding: 8px 16px;
+            background: #f5f5f5;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .refresh-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .score-section {
+            margin-bottom: 20px;
+        }
+
+        .score-title {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .score-bar {
+            height: 24px;
+            background: #f5f5f5;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .score-fill {
+            height: 100%;
+            border-radius: 12px;
+            transition: width 0.5s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .score-fill.technical {
+            background: linear-gradient(90deg, #ff9a9e 0%, #fecfef 100%);
+        }
+
+        .score-fill.fundamental {
+            background: linear-gradient(90deg, #a18cd1 0%, #fbc2eb 100%);
+        }
+
+        .score-fill.sentiment {
+            background: linear-gradient(90deg, #84fab0 0%, #8fd3f4 100%);
+        }
+
+        .score-fill.total {
+            height: 36px;
+            font-size: 16px;
+        }
+
+        .score-fill.total.green {
+            background: linear-gradient(90deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .score-fill.total.yellow {
+            background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .score-fill.total.orange {
+            background: linear-gradient(90deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .score-fill.total.red {
+            background: linear-gradient(90deg, #ff6b6b 0%, #ee5a6f 100%);
+        }
+
+        .recommendation {
+            text-align: center;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+        }
+
+        .recommendation.green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .recommendation.yellow {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .recommendation.orange {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        .recommendation.red {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+            color: white;
+        }
+
+        .recommendation .action {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .recommendation .score {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .reasons {
+            margin-top: 20px;
+        }
+
+        .reason-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #f5f5f5;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .reason-item:last-child {
+            border-bottom: none;
+        }
+
+        .warnings {
+            margin-top: 15px;
+            padding: 12px;
+            background: #fff3cd;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .missing-data {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .missing-data .title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            display: none;
+            padding: 20px;
+            background: #ffebee;
+            border-radius: 12px;
+            color: #c62828;
+            text-align: center;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 22px;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .result-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+
+            .recommendation .score {
+                font-size: 36px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>股票/ETF分析系统</h1>
+            <p class="update-time" id="updateTime">上次更新: --</p>
+        </div>
+
+        <div class="card">
+            <div class="search-box">
+                <input type="text" id="symbolInput" placeholder="输入ETF代码，如 513120" value="513120">
+                <button onclick="analyze()" id="analyzeBtn">分析</button>
+            </div>
+
+            <div class="quick-search">
+                <button class="quick-btn" onclick="quickSearch('513120')">513120</button>
+                <span class="stock-name">港股创新药ETF</span>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在分析...</p>
+        </div>
+
+        <div class="error" id="error"></div>
+
+        <div class="card result-card" id="resultCard">
+            <div class="result-header">
+                <div>
+                    <div class="result-title" id="stockName">--</div>
+                    <div style="font-size: 13px; color: #888; margin-top: 4px;" id="stockCode">--</div>
+                </div>
+                <div class="result-price" id="currentPrice">--</div>
+                <button class="refresh-btn" onclick="refreshAnalysis()">🔄 刷新</button>
+            </div>
+
+            <div class="score-section">
+                <div class="score-title">技术面 (40分)</div>
+                <div class="score-bar">
+                    <div class="score-fill technical" id="technicalScore" style="width: 0%">0/40</div>
+                </div>
+            </div>
+
+            <div class="score-section">
+                <div class="score-title">基本面 (40分)</div>
+                <div class="score-bar">
+                    <div class="score-fill fundamental" id="fundamentalScore" style="width: 0%">0/40</div>
+                </div>
+            </div>
+
+            <div class="score-section">
+                <div class="score-title">情绪面 (20分)</div>
+                <div class="score-bar">
+                    <div class="score-fill sentiment" id="sentimentScore" style="width: 0%">0/20</div>
+                </div>
+            </div>
+
+            <div class="score-section">
+                <div class="score-title">综合评分 (100分)</div>
+                <div class="score-bar" style="height: 36px;">
+                    <div class="score-fill total" id="totalScore" style="width: 0%">0/100</div>
+                </div>
+            </div>
+
+            <div class="recommendation" id="recommendation">
+                <div class="action" id="recommendAction">--</div>
+                <div class="score" id="recommendScore">--</div>
+            </div>
+
+            <div class="reasons" id="reasons"></div>
+
+            <div class="warnings" id="warnings" style="display: none;"></div>
+
+            <div class="missing-data" id="missingData" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentSymbol = '';
+
+        function quickSearch(symbol) {
+            document.getElementById('symbolInput').value = symbol;
+            analyze();
+        }
+
+        async function analyze() {
+            const symbol = document.getElementById('symbolInput').value.trim();
+            if (!symbol) {
+                showError('请输入标的代码');
+                return;
+            }
+
+            currentSymbol = symbol;
+            showLoading(true);
+            hideError();
+            hideResult();
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResult(data.data);
+                } else {
+                    showError(data.error || '分析失败');
+                }
+            } catch (error) {
+                showError('网络错误: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function refreshAnalysis() {
+            if (!currentSymbol) return;
+
+            const btn = event.target;
+            btn.disabled = true;
+            btn.textContent = '刷新中...';
+
+            try {
+                const response = await fetch('/api/refresh', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symbol: currentSymbol })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    displayResult(data.data);
+                } else {
+                    showError(data.error || '刷新失败');
+                }
+            } catch (error) {
+                showError('网络错误: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🔄 刷新';
+            }
+        }
+
+        function displayResult(data) {
+            // 基本信息
+            document.getElementById('stockName').textContent = data.name;
+            document.getElementById('stockCode').textContent = data.symbol;
+
+            const priceEl = document.getElementById('currentPrice');
+            priceEl.textContent = `¥${data.current_price.toFixed(3)}`;
+            priceEl.className = 'result-price ' + (data.change_pct >= 0 ? 'up' : 'down');
+            priceEl.textContent += ` (${data.change_pct >= 0 ? '+' : ''}${data.change_pct.toFixed(2)}%)`;
+
+            // 分数
+            animateScore('technicalScore', data.technical.score, data.technical.max_score);
+            animateScore('fundamentalScore', data.fundamental.score, data.fundamental.max_score);
+            animateScore('sentimentScore', data.sentiment.score, data.sentiment.max_score);
+            animateScore('totalScore', data.total_score, 100);
+
+            // 建议
+            const rec = data.recommendation;
+            const recEl = document.getElementById('recommendation');
+            recEl.className = 'recommendation ' + rec.color;
+            document.getElementById('recommendAction').textContent = rec.action;
+            document.getElementById('recommendScore').textContent = rec.total_score + '分';
+
+            // 理由
+            const reasonsHtml = data.reasons.map(r =>
+                `<div class="reason-item">• ${r}</div>`
+            ).join('');
+            document.getElementById('reasons').innerHTML = reasonsHtml;
+
+            // 警告
+            const warningsEl = document.getElementById('warnings');
+            if (data.warnings && data.warnings.length > 0) {
+                warningsEl.innerHTML = '<strong>⚠️ 风险提示：</strong><br>' + data.warnings.join('<br>');
+                warningsEl.style.display = 'block';
+            } else {
+                warningsEl.style.display = 'none';
+            }
+
+            // 缺失数据
+            const missingEl = document.getElementById('missingData');
+            if (data.missing_analysis && data.missing_analysis.length > 0) {
+                missingEl.innerHTML = '<div class="title">⚠️ 数据缺失：</div>' +
+                    data.missing_analysis.map(m => `<div>→ ${m}</div>`).join('');
+                missingEl.style.display = 'block';
+            } else {
+                missingEl.style.display = 'none';
+            }
+
+            // 更新时间
+            document.getElementById('updateTime').textContent = '数据时间: ' + data.timestamp;
+
+            showResult();
+        }
+
+        function animateScore(elementId, score, maxScore) {
+            const el = document.getElementById(elementId);
+            const percentage = (score / maxScore) * 100;
+            el.style.width = percentage + '%';
+            el.textContent = `${score}/${maxScore}`;
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('show', show);
+        }
+
+        function hideResult() {
+            document.getElementById('resultCard').classList.remove('show');
+        }
+
+        function showResult() {
+            document.getElementById('resultCard').classList.add('show');
+        }
+
+        function showError(message) {
+            const el = document.getElementById('error');
+            el.textContent = message;
+            el.classList.add('show');
+        }
+
+        function hideError() {
+            document.getElementById('error').classList.remove('show');
+        }
+
+        // 回车键触发分析
+        document.getElementById('symbolInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                analyze();
+            }
+        });
+    </script>
+</body>
+</html>
