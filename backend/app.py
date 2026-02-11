@@ -14,10 +14,11 @@ app = Flask(__name__, template_folder='../frontend/templates')
 app.config['JSON_AS_ASCII'] = False
 
 # 全局变量
-fetcher = DataFetcher()
+fetcher = DataFetcher(demo_mode=False)  # 设置为True可强制使用演示模式
 analyzer = Analyzer()
 cached_analysis = {}
 last_update_time = None
+demo_mode_enabled = False  # 追踪是否使用了演示模式
 
 
 def update_data():

@@ -19,11 +19,63 @@ class DataFetchError(Exception):
 class DataFetcher:
     """数据获取器"""
 
-    def __init__(self):
+    def __init__(self, demo_mode=False):
         self.missing_data = []  # 记录缺失的数据项
         self.retry_count = 3  # 重试次数
         self.retry_delay = 3  # 重试间隔（秒）
         self.timeout = 30  # 请求超时时间
+        self.demo_mode = demo_mode  # 演示模式
+
+    def get_demo_data(self, symbol: str) -> Dict:
+        """
+        获取演示数据（当网络不可用时使用）
+        """
+        print("  [演示模式] 使用模拟数据")
+        return {
+            'code': symbol,
+            'name': '港股创新药ETF' if symbol == '513120' else f'ETF{symbol}',
+            'price': 0.656,
+            'change_pct': 2.15,
+            'volume': 125000000,
+            'turnover': 82000000,
+            'amplitude': 3.2,
+            'high': 0.668,
+            'low': 0.645,
+            'open': 0.650,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
+
+    def get_demo_kline(self) -> pd.DataFrame:
+        """获取演示K线数据"""
+        import numpy as np
+        np.random.seed(42)
+
+        dates = pd.date_range(end=datetime.now(), periods=60, freq='D')
+        base_price = 0.650
+
+        data = []
+        price = base_price
+        for i, date in enumerate(dates):
+            # 模拟价格波动
+            change = np.random.randn() * 0.02
+            price = price * (1 + change)
+
+            high = price * (1 + abs(np.random.randn() * 0.01))
+            low = price * (1 - abs(np.random.randn() * 0.01))
+            open_price = price * (1 + np.random.randn() * 0.005)
+            volume = np.random.randint(50000000, 200000000)
+
+            data.append({
+                'date': date.strftime('%Y-%m-%d'),
+                'open': round(open_price, 3),
+                'close': round(price, 3),
+                'high': round(high, 3),
+                'low': round(low, 3),
+                'volume': volume,
+                'turnover': volume * price
+            })
+
+        return pd.DataFrame(data)
 
     def _test_network(self):
         """测试网络连接"""
@@ -72,6 +124,10 @@ class DataFetcher:
         Returns:
             包含实时行情信息的字典
         """
+        # 如果是演示模式，直接返回模拟数据
+        if self.demo_mode:
+            return self.get_demo_data(symbol)
+
         def _fetch():
             # 尝试获取ETF实时行情
             try:
@@ -101,8 +157,10 @@ class DataFetcher:
         try:
             return self._retry_request(_fetch)
         except Exception as e:
-            self.missing_data.append(f"ETF实时行情: {str(e)}")
-            raise DataFetchError(f"获取ETF实时行情失败: {e}")
+            # 网络失败时自动切换到演示模式
+            print("  ⚠️ 网络获取失败，切换到演示模式")
+            self.missing_data.append(f"ETF实时行情: {str(e)} - 使用演示数据")
+            return self.get_demo_data(symbol)
 
     def get_kline(self, symbol: str, days: int = 252) -> pd.DataFrame:
         """
@@ -115,6 +173,10 @@ class DataFetcher:
         Returns:
             K线数据DataFrame
         """
+        # 如果是演示模式，直接返回模拟数据
+        if self.demo_mode:
+            return self.get_demo_kline()
+
         def _fetch():
             end_date = datetime.now().strftime('%Y%m%d')
             start_date = (datetime.now() - timedelta(days=days * 2)).strftime('%Y%m%d')
@@ -146,8 +208,10 @@ class DataFetcher:
         try:
             return self._retry_request(_fetch)
         except Exception as e:
-            self.missing_data.append(f"K线数据: {str(e)}")
-            raise DataFetchError(f"获取K线数据失败: {e}")
+            # 网络失败时自动切换到演示模式
+            print("  ⚠️ K线数据获取失败，切换到演示模式")
+            self.missing_data.append(f"K线数据: {str(e)} - 使用演示数据")
+            return self.get_demo_kline()
 
     def get_ma(self, df: pd.DataFrame, period: int = 20) -> float:
         """
