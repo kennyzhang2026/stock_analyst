@@ -22,21 +22,44 @@ class DataFetcher:
     def __init__(self):
         self.missing_data = []  # 记录缺失的数据项
         self.retry_count = 3  # 重试次数
-        self.retry_delay = 2  # 重试间隔（秒）
+        self.retry_delay = 3  # 重试间隔（秒）
+        self.timeout = 30  # 请求超时时间
+
+    def _test_network(self):
+        """测试网络连接"""
+        try:
+            response = requests.get("https://www.baidu.com", timeout=5)
+            return True
+        except:
+            return False
 
     def _retry_request(self, func, *args, **kwargs):
         """带重试的请求"""
         last_error = None
         for attempt in range(self.retry_count):
             try:
-                return func(*args, **kwargs)
+                print(f"  正在获取数据... (尝试 {attempt + 1}/{self.retry_count})")
+                result = func(*args, **kwargs)
+                print(f"  ✓ 数据获取成功")
+                return result
             except Exception as e:
                 last_error = e
+                error_msg = str(e)
+                print(f"  ✗ 请求失败: {error_msg[:100]}...")
+
                 if attempt < self.retry_count - 1:
-                    print(f"  请求失败，{self.retry_delay}秒后重试... (第{attempt + 1}次)")
+                    print(f"  等待 {self.retry_delay} 秒后重试...")
                     time.sleep(self.retry_delay)
                 else:
-                    print(f"  重试{self.retry_count}次后仍然失败")
+                    print(f"  重试 {self.retry_count} 次后仍然失败")
+
+                    # 检查是否是网络问题
+                    if "Connection" in error_msg or "Network" in error_msg or "connect" in error_msg.lower():
+                        print("  ⚠️ 可能是网络连接问题，请检查:")
+                        print("     - 网络是否正常")
+                        print("     - 是否需要配置代理")
+                        print("     - 防火墙是否阻止Python访问网络")
+
         raise last_error
 
     def get_etf_spot(self, symbol: str) -> Dict:
@@ -50,7 +73,12 @@ class DataFetcher:
             包含实时行情信息的字典
         """
         def _fetch():
-            df = ak.fund_etf_spot_em()
+            # 尝试获取ETF实时行情
+            try:
+                df = ak.fund_etf_spot_em()
+            except Exception as e:
+                raise DataFetchError(f"AkShare获取ETF列表失败: {e}")
+
             etf = df[df['代码'] == symbol]
 
             if etf.empty:
