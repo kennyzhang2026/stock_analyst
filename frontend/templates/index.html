@@ -167,6 +167,26 @@
             background: #e0e0e0;
         }
 
+        .data-timestamp {
+            font-size: 13px;
+            color: #888;
+            background: #f5f5f5;
+            padding: 6px 12px;
+            border-radius: 6px;
+            display: inline-block;
+            margin-top: 8px;
+        }
+
+        .data-timestamp .time-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .data-timestamp .time-value {
+            color: #333;
+            font-family: "Consolas", "Monaco", monospace;
+        }
+
         .score-section {
             margin-bottom: 20px;
         }
@@ -397,6 +417,10 @@
                 <div>
                     <div class="result-title" id="stockName">--</div>
                     <div style="font-size: 13px; color: #888; margin-top: 4px;" id="stockCode">--</div>
+                    <div class="data-timestamp" id="dataTimestamp" style="display: none;">
+                        <span class="time-label">📅 数据时间:</span>
+                        <span class="time-value" id="timestampValue">--</span>
+                    </div>
                 </div>
                 <div class="result-price" id="currentPrice">--</div>
                 <button class="refresh-btn" onclick="refreshAnalysis()">🔄 刷新</button>
@@ -522,6 +546,11 @@
             priceEl.textContent = `¥${data.current_price.toFixed(3)}`;
             priceEl.className = 'result-price ' + (data.change_pct >= 0 ? 'up' : 'down');
             priceEl.textContent += ` (${data.change_pct >= 0 ? '+' : ''}${data.change_pct.toFixed(2)}%)`;
+
+            // 数据时间戳（显示在结果卡片中）
+            const timestampEl = document.getElementById('dataTimestamp');
+            document.getElementById('timestampValue').textContent = data.timestamp || '--';
+            timestampEl.style.display = 'inline-block';
 
             // 分数
             animateScore('technicalScore', data.technical.score, data.technical.max_score);
