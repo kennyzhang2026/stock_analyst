@@ -10,7 +10,7 @@ import atexit
 from data_fetcher import DataFetcher, DataFetchError
 from analyzer import Analyzer
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='../frontend/templates')
 app.config['JSON_AS_ASCII'] = False
 
 # 全局变量
