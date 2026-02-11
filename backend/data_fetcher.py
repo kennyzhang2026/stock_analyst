@@ -89,13 +89,9 @@ class DataFetcher:
     def get_etf_spot(self, symbol: str) -> Dict:
         """
         获取ETF实时行情
-        优先使用天天基金网API，失败后尝试AkShare
+        优先使用东方财富API，失败后从K线数据获取最新价格
 
-        Args:
-            symbol: ETF代码，如 '513120'
-
-        Returns:
-            包含实时行情信息的字典
+        注意：非交易时间会显示最后交易日的收盘价
         """
         if self.demo_mode:
             return self.get_demo_data(symbol)
@@ -127,9 +123,47 @@ class DataFetcher:
         except Exception as e:
             print(f"  ✗ 失败: {str(e)[:60]}...")
 
-        # 方法2: AkShare
+        # 方法2: 从K线数据获取最新价格（更可靠）
         try:
-            print("  [方法2] AkShare...")
+            print("  [方法2] 从K线数据获取最新行情...")
+            df = self.get_kline(symbol, days=5)
+
+            if not df.empty:
+                latest = df.iloc[-1]
+                previous = df.iloc[-2] if len(df) > 1 else latest
+
+                price = latest['close']
+                change_pct = ((latest['close'] - previous['close']) / previous['close']) * 100 if len(df) > 1 else 0
+
+                # 获取名称
+                name = f'ETF{symbol}'
+                try:
+                    df_list = ak.fund_etf_spot_em()
+                    etf = df_list[df_list['代码'] == symbol]
+                    if not etf.empty:
+                        name = etf['名称'].values[0]
+                except:
+                    pass
+
+                print(f"  ✓ 成功: {name} ¥{price:.3f} (K线最新日期: {latest['date']})")
+                return {
+                    'code': symbol,
+                    'name': name,
+                    'price': price,
+                    'change_pct': round(change_pct, 2),
+                    'volume': int(latest['volume']),
+                    'turnover': latest['turnover'],
+                    'high': latest['high'],
+                    'low': latest['low'],
+                    'open': latest['open'],
+                    'timestamp': f"{latest['date']} (非交易时间显示最后收盘价)"
+                }
+        except Exception as e:
+            print(f"  ✗ 失败: {str(e)[:60]}...")
+
+        # 方法3: AkShare实时行情
+        try:
+            print("  [方法3] AkShare实时行情...")
             df = ak.fund_etf_spot_em()
             etf = df[df['代码'] == symbol]
 
@@ -150,9 +184,9 @@ class DataFetcher:
         except Exception as e:
             print(f"  ✗ 失败: {str(e)[:60]}...")
 
-        # 都失败，使用演示数据
-        print("  ⚠️ 使用演示数据")
-        self.missing_data.append("所有实时行情数据源均失败，使用演示数据")
+        # 都失败才使用演示数据
+        print("  ⚠️ 所有数据源失败，使用演示数据")
+        self.missing_data.append("所有行情数据源均失败，使用演示数据")
         return self.get_demo_data(symbol)
 
     # ==================== K线数据 ====================

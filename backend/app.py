@@ -14,7 +14,7 @@ app = Flask(__name__, template_folder='../frontend/templates')
 app.config['JSON_AS_ASCII'] = False
 
 # 全局变量
-fetcher = DataFetcher(demo_mode=False)  # 设置为True可强制使用演示模式
+fetcher = DataFetcher(demo_mode=False)  # False=尝试真实数据，True=强制演示模式
 analyzer = Analyzer()
 cached_analysis = {}
 last_update_time = None
