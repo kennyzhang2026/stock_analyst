@@ -5,6 +5,8 @@
 
 import akshare as ak
 import pandas as pd
+import requests
+import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 
@@ -19,6 +21,23 @@ class DataFetcher:
 
     def __init__(self):
         self.missing_data = []  # 记录缺失的数据项
+        self.retry_count = 3  # 重试次数
+        self.retry_delay = 2  # 重试间隔（秒）
+
+    def _retry_request(self, func, *args, **kwargs):
+        """带重试的请求"""
+        last_error = None
+        for attempt in range(self.retry_count):
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                last_error = e
+                if attempt < self.retry_count - 1:
+                    print(f"  请求失败，{self.retry_delay}秒后重试... (第{attempt + 1}次)")
+                    time.sleep(self.retry_delay)
+                else:
+                    print(f"  重试{self.retry_count}次后仍然失败")
+        raise last_error
 
     def get_etf_spot(self, symbol: str) -> Dict:
         """
@@ -30,7 +49,7 @@ class DataFetcher:
         Returns:
             包含实时行情信息的字典
         """
-        try:
+        def _fetch():
             df = ak.fund_etf_spot_em()
             etf = df[df['代码'] == symbol]
 
@@ -50,6 +69,9 @@ class DataFetcher:
                 'open': float(etf['今开'].values[0]) if '今开' in etf.columns else 0,
                 'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
+
+        try:
+            return self._retry_request(_fetch)
         except Exception as e:
             self.missing_data.append(f"ETF实时行情: {str(e)}")
             raise DataFetchError(f"获取ETF实时行情失败: {e}")
@@ -65,7 +87,7 @@ class DataFetcher:
         Returns:
             K线数据DataFrame
         """
-        try:
+        def _fetch():
             end_date = datetime.now().strftime('%Y%m%d')
             start_date = (datetime.now() - timedelta(days=days * 2)).strftime('%Y%m%d')
 
@@ -93,6 +115,8 @@ class DataFetcher:
 
             return df
 
+        try:
+            return self._retry_request(_fetch)
         except Exception as e:
             self.missing_data.append(f"K线数据: {str(e)}")
             raise DataFetchError(f"获取K线数据失败: {e}")

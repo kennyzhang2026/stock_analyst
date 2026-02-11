@@ -167,4 +167,5 @@ atexit.register(lambda: scheduler.shutdown())
 
 if __name__ == '__main__':
     # 允许局域网访问（手机可以访问）
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # debug=False 避免手机访问问题
+    app.run(host='0.0.0.0', port=5000, debug=False)
