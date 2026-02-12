@@ -1,0 +1,15 @@
+# Render 部署配置文件
+# 文档: https://render.com/docs/yaml-spec
+
+services:
+  - type: web
+    name: stock-analyst
+    env: python
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: gunicorn -c gunicorn_config.py backend.app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: FLASK_ENV
+        value: production
+    healthCheckPath: /api/health
