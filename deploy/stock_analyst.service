@@ -1,0 +1,20 @@
+[Unit]
+Description=Stock Analyst - A股/ETF分析系统
+After=network.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/stock_analyst
+Environment="PATH=/opt/stock_analyst/venv/bin"
+ExecStart=/opt/stock_analyst/venv/bin/gunicorn -c gunicorn_config.py backend.app:app
+ExecReload=/bin/kill -s HUP $MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
