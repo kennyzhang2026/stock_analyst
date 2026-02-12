@@ -1,0 +1,14 @@
+# Zeabur 额外配置
+# 用于服务的额外设置
+
+services:
+  - type: web
+    name: stock-analyst
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -c gunicorn_config.py backend.app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11
+      - key: FLASK_ENV
+        value: production

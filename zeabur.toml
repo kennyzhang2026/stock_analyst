@@ -1,0 +1,20 @@
+# Zeabur 部署配置文件
+# 文档: https://zeabur.com/docs/zh-CN/deploy/build-configuration
+
+[service]
+# 服务名称
+name = "stock-analyst"
+
+# 构建命令
+build_command = "pip install --upgrade pip && pip install -r requirements.txt"
+
+# 启动命令
+start_command = "gunicorn -c gunicorn_config.py backend.app:app"
+
+# 环境变量
+[service.env]
+PYTHON_VERSION = "3.11"
+
+# 端口配置（Zeabur 会自动分配 PORT 环境变量）
+[service.env.production]
+FLASK_ENV = "production"
