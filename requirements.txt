@@ -18,4 +18,3 @@ APScheduler>=3.10.0
 
 # 云端部署
 gunicorn>=21.0.0
-vercel-wsgi>=0.2.0
