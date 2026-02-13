@@ -3,12 +3,18 @@ Flask Web应用
 股票/ETF分析决策系统
 """
 
+import os
 from flask import Flask, render_template, request, jsonify
-from apscheduler.schedulers.background import BackgroundScheduler
-import atexit
 
-from data_fetcher import DataFetcher, DataFetchError
-from analyzer import Analyzer
+# 只在非 serverless 环境中导入 APScheduler
+IS_SERVERLESS = os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_VERSION')
+
+if not IS_SERVERLESS:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    import atexit
+
+from .data_fetcher import DataFetcher, DataFetchError
+from .analyzer import Analyzer
 
 app = Flask(__name__, template_folder='../frontend/templates')
 app.config['JSON_AS_ASCII'] = False
@@ -157,13 +163,14 @@ def health():
 
 
 # 启动定时器（每15分钟更新一次）
-scheduler = BackgroundScheduler(daemon=True)
-scheduler.add_job(update_data, 'interval', minutes=15)
-scheduler.start()
+# 只在非 serverless 环境中启动
+if not IS_SERVERLESS:
+    scheduler = BackgroundScheduler(daemon=True)
+    scheduler.add_job(update_data, 'interval', minutes=15)
+    scheduler.start()
 
-
-# 注册退出时关闭调度器
-atexit.register(lambda: scheduler.shutdown())
+    # 注册退出时关闭调度器
+    atexit.register(lambda: scheduler.shutdown())
 
 
 if __name__ == '__main__':

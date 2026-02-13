@@ -15,3 +15,6 @@ requests>=2.31.0
 
 # 定时任务
 APScheduler>=3.10.0
+
+# 云端部署
+gunicorn>=21.0.0
