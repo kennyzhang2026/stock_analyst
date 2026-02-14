@@ -18,3 +18,7 @@ APScheduler>=3.10.0
 
 # 云端部署
 gunicorn>=21.0.0
+
+# 测试
+pytest>=7.0.0
+pytest-cov>=4.0.0
