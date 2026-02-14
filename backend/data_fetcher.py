@@ -18,9 +18,10 @@ class DataFetchError(Exception):
 class DataFetcher:
     """数据获取器"""
 
-    def __init__(self, demo_mode=False):
+    def __init__(self, demo_mode=False, mock_mode=False):
         self.missing_data = []  # 记录缺失的数据项
         self.demo_mode = demo_mode  # 演示模式
+        self.mock_mode = mock_mode  # 模拟数据模式（用于测试v0.8功能）
         self.timeout = 10  # 请求超时时间（秒）
 
         # 天天基金/东方财富API请求头
@@ -335,3 +336,60 @@ class DataFetcher:
     def clear_missing_data(self):
         """清空缺失数据记录"""
         self.missing_data = []
+
+    # ==================== 模拟数据功能 ====================
+    def generate_mock_intraday_prices(self, symbol: str, date: str = None) -> List[Dict]:
+        """
+        生成模拟日内价格数据（用于测试v0.8功能）
+
+        Args:
+            symbol: 标的代码
+            date: 日期（YYYY-MM-DD格式），默认为今天
+
+        Returns:
+            每小时的价格数据列表（9:00-15:00）
+        """
+        import numpy as np
+        from datetime import datetime, timedelta
+
+        if date is None:
+            date = datetime.now().strftime('%Y-%m-%d')
+        else:
+            date = date
+
+        # 生成基准价格（基于日期的伪随机）
+        np.random.seed(int(datetime.strptime(date, '%Y-%m-%d').timestamp()))
+        base_price = 0.650 + np.random.randn() * 0.02
+
+        prices = []
+        for hour in range(9, 15):  # 9:00-14:00
+            hour_time = f"{hour:00}"
+            # 模拟价格波动
+            price_change = np.random.randn() * 0.015
+            price = base_price + price_change
+
+            # 计算涨跌幅（相对于开盘价）
+            change_pct = ((price - base_price) / base_price) * 100
+
+            prices.append({
+                'time': hour_time,
+                'hour': hour,
+                'price': round(price, 3),
+                'change_pct': round(change_pct, 2),
+                'volume': np.random.randint(50000000, 200000000),
+            })
+
+        return prices
+
+    def get_mock_intraday_prices(self, symbol: str, date: str = None) -> List[Dict]:
+        """
+        获取日内价格数据（模拟模式）
+
+        Returns:
+            每小时的价格数据列表
+        """
+        if self.mock_mode:
+            return self.generate_mock_intraday_prices(symbol, date)
+        else:
+            # 正式模式暂时返回空（实际应该从真实API获取）
+            return []

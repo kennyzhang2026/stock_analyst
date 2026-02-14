@@ -25,7 +25,7 @@ app = Flask(__name__, template_folder='../frontend/templates')
 app.config['JSON_AS_ASCII'] = False
 
 # 全局变量
-fetcher = DataFetcher(demo_mode=False)  # False=尝试真实数据，True=强制演示模式
+fetcher = DataFetcher(demo_mode=False, mock_mode=False)  # 可通过环境变量或API控制模拟模式
 analyzer = Analyzer()
 cached_analysis = {}
 last_update_time = None
@@ -192,7 +192,37 @@ def health():
     return jsonify({
         'status': 'ok',
         'cached_count': len(cached_analysis),
-        'last_update': last_update_time
+        'last_update': last_update_time,
+        'mock_mode': fetcher.mock_mode  # 显示是否在模拟模式
+    })
+
+
+@app.route('/api/mock/toggle', methods=['POST'])
+def api_mock_toggle():
+    """切换模拟数据模式"""
+    data = request.get_json()
+    enabled = data.get('enabled', False)
+
+    fetcher.mock_mode = enabled
+    mode_text = '开启' if enabled else '关闭'
+
+    return jsonify({
+        'success': True,
+        'message': f'模拟数据模式已{mode_text}'
+    })
+
+
+@app.route('/api/mock/intraday/<symbol>')
+def api_mock_intraday(symbol):
+    """获取模拟日内价格数据"""
+    date = request.args.get('date')
+    prices = fetcher.get_mock_intraday_prices(symbol, date)
+
+    return jsonify({
+        'success': True,
+        'symbol': symbol,
+        'date': date or datetime.now().strftime('%Y-%m-%d'),
+        'data': prices
     })
 
 
